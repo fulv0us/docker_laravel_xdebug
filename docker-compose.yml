@@ -1,0 +1,64 @@
+version: '3'
+services:
+  #PHP
+  app:
+    build:
+      context: ./laravel-app
+      dockerfile: ./Dockerfile
+    image: php
+    container_name: app
+    restart: unless-stopped
+    tty: true
+    volumes:
+     - ./laravel-app/:/var/www
+     - ./php/local.ini:/usr/local/etc/php/conf.d/local.ini
+     - ./php/php-fpm/php.ini:/usr/local/etc/php/php.ini
+    working_dir: /var/www
+    environment: #для xdebug
+      XDEBUG_CONFIG: "remote_host=192.168.220.1 remote_enable=1"
+      PHP_IDE_CONFIG: "serverName=Docker"
+    networks:
+      - app-network
+
+  #Nginx Service
+  web_server:
+    image: nginx:alpine
+    container_name: web_server
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "8080:8080"
+    networks:
+      - app-network
+    volumes:
+      - ./laravel-app/:/var/www
+      - ./nginx/conf.d/:/etc/nginx/conf.d/
+
+  db:
+    image: mariadb:latest
+    container_name: db
+    tty: true
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: laravel_test
+      MYSQL_ROOT_PASSWORD: P@SsWordsef354g
+    volumes:
+      #- dbdata:/var/lib/mysql
+      - ./mariadb:/var/lib/mysql
+      - ./mysql/my.cnf:/etc/mysql/my.cnf
+    restart: unless-stopped
+    networks:
+      - app-network
+
+networks: #для xdebug
+  app-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.220.0/28
+
+volumes:
+  dbdata:
+    driver: local
